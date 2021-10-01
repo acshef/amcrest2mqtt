@@ -170,6 +170,7 @@ topics = {
     "motion": f"amcrest2mqtt/{serial_number}/motion",
     "doorbell": f"amcrest2mqtt/{serial_number}/doorbell",
     "human": f"amcrest2mqtt/{serial_number}/human",
+    "light": f"amcrest2mqtt/{serial_number}/light",
     "storage_used": f"amcrest2mqtt/{serial_number}/storage/used",
     "storage_used_percent": f"amcrest2mqtt/{serial_number}/storage/used_percent",
     "storage_total": f"amcrest2mqtt/{serial_number}/storage/total",
@@ -177,6 +178,7 @@ topics = {
         "doorbell": f"{home_assistant_prefix}/binary_sensor/amcrest2mqtt-{serial_number}/{device_slug}_doorbell/config",
         "human": f"{home_assistant_prefix}/binary_sensor/amcrest2mqtt-{serial_number}/{device_slug}_human/config",
         "motion": f"{home_assistant_prefix}/binary_sensor/amcrest2mqtt-{serial_number}/{device_slug}_motion/config",
+        "light": f"{home_assistant_prefix}/binary_sensor/amcrest2mqtt-{serial_number}/{device_slug}_light/config",
         "storage_used": f"{home_assistant_prefix}/sensor/amcrest2mqtt-{serial_number}/{device_slug}_storage_used/config",
         "storage_used_percent": f"{home_assistant_prefix}/sensor/amcrest2mqtt-{serial_number}/{device_slug}_storage_used_percent/config",
         "storage_total": f"{home_assistant_prefix}/sensor/amcrest2mqtt-{serial_number}/{device_slug}_storage_total/config",
@@ -262,6 +264,19 @@ if home_assistant:
             },
             json=True,
         )
+        mqtt_publish(
+            topics["home_assistant"]["light"],
+            base_config
+            | {
+                "state_topic": topics["light"],
+                "payload_on": "on",
+                "payload_off": "off",
+                "device_class": "light",
+                "name": f"{device_name} Light",
+                "unique_id": f"{serial_number}.light",
+            },
+            json=True
+        )
 
     mqtt_publish(
         topics["home_assistant"]["motion"],
@@ -345,6 +360,10 @@ try:
         elif code == "_DoTalkAction_":
             doorbell_payload = "on" if payload["data"]["Action"] == "Invite" else "off"
             mqtt_publish(topics["doorbell"], doorbell_payload)
+        elif code == "LeFunctionStatusSync" and payload["data"]["Function"] == "WightLight":
+            light_payload = "on" if payload["data"]["Status"] == "true" else "off"
+            mqtt_publish(topics["light"], light_payload)
+            # TODO: publish strobe on/off attribute via attributes topic
 
         mqtt_publish(topics["event"], payload, json=True)
         log(str(payload))
