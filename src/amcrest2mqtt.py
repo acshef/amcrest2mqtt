@@ -178,7 +178,7 @@ topics = {
         "doorbell": f"{home_assistant_prefix}/binary_sensor/amcrest2mqtt-{serial_number}/{device_slug}_doorbell/config",
         "human": f"{home_assistant_prefix}/binary_sensor/amcrest2mqtt-{serial_number}/{device_slug}_human/config",
         "motion": f"{home_assistant_prefix}/binary_sensor/amcrest2mqtt-{serial_number}/{device_slug}_motion/config",
-        "light": f"{home_assistant_prefix}/binary_sensor/amcrest2mqtt-{serial_number}/{device_slug}_light/config",
+        "light": f"{home_assistant_prefix}/light/amcrest2mqtt-{serial_number}/{device_slug}_light/config",
         "storage_used": f"{home_assistant_prefix}/sensor/amcrest2mqtt-{serial_number}/{device_slug}_storage_used/config",
         "storage_used_percent": f"{home_assistant_prefix}/sensor/amcrest2mqtt-{serial_number}/{device_slug}_storage_used_percent/config",
         "storage_total": f"{home_assistant_prefix}/sensor/amcrest2mqtt-{serial_number}/{device_slug}_storage_total/config",
@@ -268,10 +268,11 @@ if home_assistant:
             topics["home_assistant"]["light"],
             base_config
             | {
-                "state_topic": topics["light"],
+                "~": topics["light"],
+                "state_topic": "~/state",
+                "command_topic": "~/set",
                 "payload_on": "on",
                 "payload_off": "off",
-                "device_class": "light",
                 "name": f"{device_name} Light",
                 "unique_id": f"{serial_number}.light",
             },
@@ -362,7 +363,7 @@ try:
             mqtt_publish(topics["doorbell"], doorbell_payload)
         elif code == "LeFunctionStatusSync" and payload["data"]["Function"] == "WightLight":
             light_payload = "on" if payload["data"]["Status"] == "true" else "off"
-            mqtt_publish(topics["light"], light_payload)
+            mqtt_publish('{}/{}'.format(topics["light"], "state"), light_payload)
             # TODO: publish strobe on/off attribute via attributes topic
 
         mqtt_publish(topics["event"], payload, json=True)
