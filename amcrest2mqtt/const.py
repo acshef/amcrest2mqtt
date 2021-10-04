@@ -23,3 +23,6 @@ DEFAULT_MQTT_QOS = 0
 DEFAULT_MQTT_PORT = 1883
 DEFAULT_HOME_ASSISTANT_PREFIX = "homeassistant"
 ENV_ENABLED_VALUES = {"true", "1", "y", "yes", "on"}
+
+LIGHT_MODE_SOLID = "Solid"
+LIGHT_MODE_STROBE = "Strobe"
