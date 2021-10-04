@@ -362,7 +362,7 @@ try:
             mqtt_publish(topics["doorbell"], doorbell_payload)
         elif code == "LeFunctionStatusSync" and payload["data"]["Function"] == "WightLight":
             light_payload = "on" if payload["data"]["Status"] == "true" else "off"
-            effect = "flashing" if light_payload == "on" and "true" in payload["data"]["Flicker"] else None
+            effect = "flashing" if light_payload == "on" and "true" in payload["data"]["Flicker"] else ""
             mqtt_publish("{}/{}".format(topics["light"], "state"), light_payload)
             mqtt_publish("{}/{}".format(topics["light"], "effect"), effect)
 
