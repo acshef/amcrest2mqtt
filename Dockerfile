@@ -12,4 +12,4 @@ COPY --from=builder /install /usr/local
 COPY amcrest2mqtt /amcrest2mqtt
 WORKDIR /
 
-CMD [ "python", "-u", "amcrest2mqtt" ]
+CMD [ "python", "-u", "-m", "amcrest2mqtt" ]
