@@ -264,7 +264,11 @@ if home_assistant:
                 "~": topics["light"],
                 "state_topic": "~/state",
                 "command_topic": "~/set",
-                "json_attributes_topic": "~/attributes",
+				"effect_command_topic": "~/set_effect",
+				"effect_state_topic": "~/effect",
+				"effect_list": [
+					"flashing"
+				],
                 "payload_on": "on",
                 "payload_off": "off",
                 "name": f"{device_name} Flashlight",
@@ -358,11 +362,9 @@ try:
             mqtt_publish(topics["doorbell"], doorbell_payload)
         elif code == "LeFunctionStatusSync" and payload["data"]["Function"] == "WightLight":
             light_payload = "on" if payload["data"]["Status"] == "true" else "off"
-            attributes = {
-                "flashing": light_payload == "on" and "true" in payload["data"]["Flicker"]
-            }
+            effect = "flashing" if light_payload == "on" and "true" in payload["data"]["Flicker"] else None
             mqtt_publish("{}/{}".format(topics["light"], "state"), light_payload)
-            mqtt_publish("{}/{}".format(topics["light"], "attributes"), attributes, json=True)
+            mqtt_publish("{}/{}".format(topics["light"], "effect"), effect)
 
         mqtt_publish(topics["event"], payload, json=True)
         log(str(payload))
