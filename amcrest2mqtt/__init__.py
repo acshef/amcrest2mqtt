@@ -1,0 +1,1 @@
+""" Entrypoint to amcrest2mqtt package. """
