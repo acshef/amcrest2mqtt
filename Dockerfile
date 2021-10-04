@@ -9,8 +9,7 @@ RUN pip install --no-warn-script-location --prefix=/install -r /requirements.txt
 
 FROM base
 COPY --from=builder /install /usr/local
-COPY src /app
-COPY VERSION /app
-WORKDIR /app
+COPY amcrest2mqtt /amcrest2mqtt
+WORKDIR /
 
-CMD [ "python", "-u", "/app/amcrest2mqtt.py" ]
+CMD [ "python", "-u", "amcrest2mqtt" ]
