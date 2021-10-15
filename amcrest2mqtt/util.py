@@ -3,6 +3,8 @@ import typing as t
 import platform
 import subprocess
 
+from slugify import slugify as _slugify
+
 SYS_WINDOWS = platform.system().lower() == "windows"
 
 def ping(host: str, timeout: t.Union[float, int, timedelta]=None) -> bool:
@@ -24,3 +26,6 @@ def ping(host: str, timeout: t.Union[float, int, timedelta]=None) -> bool:
 	)
 
 	return p.returncode == 0
+
+def slugify(text: str) -> str:
+	return _slugify(text, separator="_")
