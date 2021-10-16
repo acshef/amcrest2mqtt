@@ -45,10 +45,6 @@ class Config(NamedTuple):
 			ha_prefix=getenv(ENV_HOME_ASSISTANT_PREFIX) or DEFAULT_HOME_ASSISTANT_PREFIX
 		)
 
-	@property
-	def amcrest_camera_args(self):
-		return (self.amcrest_host, self.amcrest_port, self.amcrest_username, self.amcrest_password)
-
 
 
 def get_boolenv(key: str) -> bool:

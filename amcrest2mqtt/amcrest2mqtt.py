@@ -5,14 +5,12 @@ import sys
 from threading import Timer
 import typing as t
 
-from amcrest import AmcrestCamera, AmcrestError
-
+from .camera import Camera, AmcrestError
 from .config import Config
 from .const import *
-from .device import Device
 from .entity import Entity
 from .mqtt_client import MQTTClient
-from .util import ping, slugify
+from .util import ping
 
 
 _is_exiting = False # Global
@@ -45,11 +43,11 @@ class Amcrest2MQTT:
         # Handle interruptions
         signal.signal(signal.SIGINT, self.signal_handler)
 
-        self.camera = AmcrestCamera(*self.config.amcrest_camera_args).camera
+        self.camera = Camera.from_config(self.config)
 
         logger.info("Fetching camera details")
         try:
-            self.device = Device.from_amcrest_camera(self.camera)
+            self.device = self.camera.get_device()
         except AmcrestError:
             logger.error(f"Error fetching camera details")
             sys.exit(1)
@@ -73,6 +71,7 @@ class Amcrest2MQTT:
         self.entity_storage_used_percent = self.create_entity(**Entity.DEF_STORAGE_USED_PERCENT)
         self.entity_storage_used = self.create_entity(**Entity.DEF_STORAGE_USED)
         self.entity_storage_total = self.create_entity(**Entity.DEF_STORAGE_TOTAL)
+        self.entity_siren_volume = self.create_entity(**Entity.DEF_SIREN_VOLUME)
 
         # Configure Home Assistant
         if self.config.ha_enabled:
@@ -84,6 +83,7 @@ class Amcrest2MQTT:
             if self.is_ad410:
                 self.entity_human.discover()
                 self.entity_flashlight.discover()
+                self.entity_siren_volume.discover()
 
             self.entity_motion.discover()
 
@@ -102,14 +102,17 @@ class Amcrest2MQTT:
         logger.info("Performing initial camera ping...")
         self.ping_camera()
 
+        if self.is_ad410:
+            try:
+                siren_volume = self.camera.get_config("VideoTalkPhoneGeneral.RingVolume", int)
+                self.entity_siren_volume.publish(siren_volume)
+            except:
+                pass
+
         logger.info("Listening for events...")
 
         try:
-            for code, payload in self.camera.event_actions(
-                CAMERA_EVENTS_SPECIFIER,
-                retries=CAMERA_EVENTS_RETRIES,
-                timeout_cmd=CAMERA_EVENTS_TIMEOUT
-            ):
+            for code, payload in self.camera.events():
                 self.handle_event(code, payload)
         except AmcrestError as error:
             logger.error(f"Amcrest error {error}")

@@ -39,17 +39,3 @@ class Device(NamedTuple):
 	@property
 	def event_topic(self) -> str:
 		return f"{self.topic}/event"
-
-	@classmethod
-	def from_amcrest_camera(cls, camera: AmcrestCamera) -> "Device":
-		device_type = camera.device_type.replace("type=", "").strip()
-		serial_number = camera.serial_number.strip()
-		sw_version = camera.software_information[0].replace("version=", "").strip()
-		device_name = camera.machine_name.replace("name=", "").strip()
-
-		return cls(
-            name=device_name,
-            model=device_type,
-            serial_no=serial_number,
-            sw_version=sw_version
-        )
