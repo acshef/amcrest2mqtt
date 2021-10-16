@@ -148,3 +148,12 @@ class Entity:
 		"icon": ICON_MICRO_SD,
 		"unit_of_measurement": UNITS_GIGABYTES
 	}
+	DEF_SIREN_VOLUME = {
+		"name": "Siren Volume",
+		"component": COMPONENT_NUMBER,
+		"icon": ICON_VOLUME_HIGH,
+		"command_topic": "~/set",
+		"min": 0,
+		"max": 100,
+		"step": 1
+	}

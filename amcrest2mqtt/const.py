@@ -38,11 +38,13 @@ DEVICE_TYPE_AD410 = "AD410"
 
 COMPONENT_BINARY_SENSOR = "binary_sensor"
 COMPONENT_LIGHT = "light"
+COMPONENT_NUMBER = "number"
 COMPONENT_SENSOR = "sensor"
 
 ICON_FACE_RECOGNITION = "mdi:face-recognition"
 ICON_FLASHLIGHT = "mdi:flashlight"
 ICON_MICRO_SD = "mdi:micro-sd"
+ICON_VOLUME_HIGH = "mdi:volume-high"
 
 LIGHT_MODE_SOLID = "Solid"
 LIGHT_MODE_STROBE = "Strobe"
