@@ -10,6 +10,7 @@ class Config(NamedTuple):
 	amcrest_username: str
 	amcrest_password: str
 	storage_poll_interval: int
+	config_poll_interval: int
 
 	mqtt_host: str
 	mqtt_qos: int
@@ -32,6 +33,7 @@ class Config(NamedTuple):
 			amcrest_username=getenv(ENV_AMCREST_USERNAME) or DEFAULT_AMCREST_USERNAME,
 			amcrest_password=getenv(ENV_AMCREST_PASSWORD),
 			storage_poll_interval=int(getenv(ENV_STORAGE_POLL_INTERVAL) or DEFAULT_STORAGE_POLL_INTERVAL),
+			config_poll_interval=int(getenv(ENV_CONFIG_POLL_INTERVAL) or DEFAULT_CONFIG_POLL_INTERVAL),
 			mqtt_host=getenv(ENV_MQTT_HOST) or DEFAULT_MQTT_HOST,
 			mqtt_qos=int(getenv(ENV_MQTT_QOS) or DEFAULT_MQTT_QOS),
 			mqtt_port=int(getenv(ENV_MQTT_PORT) or DEFAULT_MQTT_PORT),
