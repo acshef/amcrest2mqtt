@@ -1,5 +1,6 @@
 from __future__ import annotations
 import typing as t
+import logging
 
 from .config import Config
 from .const import *
@@ -11,6 +12,9 @@ if t.TYPE_CHECKING:
 	from .amcrest2mqtt import Amcrest2MQTT
 
 
+logger = logging.getLogger(__name__)
+
+
 class Entity:
 	def __init__(
 		self,
@@ -19,13 +23,20 @@ class Entity:
 		component: str,
 		*,
 		friendly_name: t.Optional[str] = None,
+		command_topics: t.Optional[t.Dict[str, str]] = None,
 		**extra_config
 	):
 		self.name = name
 		self.component = component
 		self.api = api
 		self.__friendly_name = friendly_name
+		self.command_topics = {}
 		self.extra_config = extra_config
+
+		if command_topics:
+			for command, topic in command_topics.items():
+				self.extra_config[f"{command}_topic"] = topic
+				self.command_topics[command] = self.absolute_topic(topic)
 
 		if component in (COMPONENT_BINARY_SENSOR, COMPONENT_LIGHT):
 			self.extra_config["payload_on"] = PAYLOAD_ON
@@ -69,9 +80,17 @@ class Entity:
 		node_id = f"{APP_NAME}-{self.device.serial_no}"
 		return f"{self.config.ha_prefix}/{self.component}/{node_id}/{self.device.slug}_{self.name_slug}/config"
 
-	def discover(self):
+	def absolute_topic(self, topic: str):
+		if topic.startswith("~"):
+			topic = topic.replace("~", self.base_topic, 1)
+		if topic.endswith("~"):
+			start, _, _ = topic.rpartition("~") # Because there's no such thing as str.rreplace()
+			topic = f"{start}{self.base_topic}"
+		return topic
+
+	def setup_ha(self):
 		"""
-		Publish discovery to Home Assistant
+		Publish discovery to Home Assistant, then subscribe to command topics
 		"""
 		self.api.mqtt_publish(
 			self.config_topic,
@@ -87,6 +106,9 @@ class Entity:
 			},
 			json=True
 		)
+		for topic in self.command_topics.values():
+			logger.info(f'Subscribing to command topic "{topic}" for entity "{self.name}"')
+			self.api.mqtt_client.subscribe(topic)
 
 	def publish(self, payload: t.Any, topic: str = None, *, json: bool=False):
 		"""
@@ -115,8 +137,10 @@ class Entity:
 	DEF_FLASHLIGHT = {
 		"name": "Flashlight",
 		"component": COMPONENT_LIGHT,
-		"command_topic": "~/set",
-		"effect_command_topic": "~/set_effect",
+		"command_topics": {
+			"command": "~/set",
+			"effect_command": "~/set_effect",
+		},
 		"effect_state_topic": "~/effect",
 		"effect_list": [
 			LIGHT_MODE_SOLID,
@@ -152,8 +176,10 @@ class Entity:
 		"name": "Siren Volume",
 		"component": COMPONENT_NUMBER,
 		"icon": ICON_VOLUME_HIGH,
-		"command_topic": "~/set",
+		"command_topics": {
+			"command": "~/set"
+		},
 		"min": 0,
 		"max": 100,
-		"step": 1
+		"step": 1,
 	}

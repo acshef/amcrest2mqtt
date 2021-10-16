@@ -9,8 +9,8 @@ from .camera import Camera, AmcrestError
 from .config import Config
 from .const import *
 from .entity import Entity
-from .mqtt_client import MQTTClient
-from .util import ping
+from .mqtt_client import MQTTClient, MQTTMessage
+from .util import clamp, ping
 
 
 _is_exiting = False # Global
@@ -59,6 +59,7 @@ class Amcrest2MQTT:
         try:
             self.mqtt_client = MQTTClient(config=self.config, device=self.device)
             self.mqtt_client.on_disconnect = self.on_mqtt_disconnect
+            self.mqtt_client.on_message = self.on_mqtt_message
         except Exception as exc:
             logger.error(f"Could not connect to MQTT server: {exc}")
             sys.exit(1)
@@ -78,22 +79,26 @@ class Amcrest2MQTT:
             logger.info("Writing Home Assistant discovery config...")
 
             if self.is_doorbell:
-                self.entity_doorbell.discover()
+                self.entity_doorbell.setup_ha()
 
             if self.is_ad410:
-                self.entity_human.discover()
-                self.entity_flashlight.discover()
-                self.entity_siren_volume.discover()
+                self.entity_human.setup_ha()
+                self.entity_flashlight.setup_ha()
+                self.entity_siren_volume.setup_ha()
 
-            self.entity_motion.discover()
+            self.entity_motion.setup_ha()
 
             if self.config.storage_poll_interval > 0:
-                self.entity_storage_used_percent.discover()
-                self.entity_storage_used.discover()
-                self.entity_storage_total.discover()
+                self.entity_storage_used_percent.setup_ha()
+                self.entity_storage_used.setup_ha()
+                self.entity_storage_total.setup_ha()
 
         # Begin main behavior
         self.mqtt_publish(self.device.status_topic, PAYLOAD_ONLINE)
+
+        if self.config.config_poll_interval > 0:
+            logger.info("Performing initial check of config sensors...")
+            self.refresh_config_sensors()
 
         if self.config.storage_poll_interval > 0:
             logger.info("Performing initial check of storage sensors...")
@@ -156,6 +161,16 @@ class Amcrest2MQTT:
             logger.error(f"Unexpected MQTT disconnection")
             self.exit_gracefully(rc, skip_mqtt=True)
 
+    def on_mqtt_message(self, client, userdata, message: MQTTMessage):
+        if self.is_ad410 and message.topic == self.entity_siren_volume.command_topics["command"]:
+            new_volume = clamp(int(message.payload), min=0, max=100)
+            logger.info(f"Setting Siren Volume to {new_volume}%")
+            self.camera.set_config("VideoTalkPhoneGeneral.RingVolume", new_volume)
+            siren_volume = self.camera.get_config("VideoTalkPhoneGeneral.RingVolume", int)
+            self.entity_siren_volume.publish(siren_volume)
+        else:
+            logger.warning(f'Unsupported topic "{message.topic}"')
+
     def exit_gracefully(self, rc: int, skip_mqtt=False):
         logger.info("Exiting app...")
 
@@ -191,6 +206,14 @@ class Amcrest2MQTT:
 
         self.mqtt_publish(self.device.event_topic, payload, json=True)
         logger.info(str(payload))
+
+    def refresh_config_sensors(self):
+        Timer(self.config.config_poll_interval, self.refresh_config_sensors).start()
+        logger.info("Fetching config sensors...")
+
+        if self.is_ad410:
+            siren_volume = self.camera.get_config("VideoTalkPhoneGeneral.RingVolume", int)
+            self.entity_siren_volume.publish(siren_volume)
 
     def refresh_storage_sensors(self):
         Timer(self.config.storage_poll_interval, self.refresh_storage_sensors).start()

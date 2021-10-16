@@ -2,23 +2,28 @@ import logging, ssl, sys
 from json import dumps
 import typing as t
 
-import paho.mqtt.client as mqtt
+from paho.mqtt.client import Client, MQTTMessage, MQTT_ERR_SUCCESS, error_string
 
 from .config import Config
 from .const import *
 from .device import Device
 
+__all__ = ["MQTTClient", "MQTTMessage", "MQTTPublishError"]
+
+
 logger = logging.getLogger(__name__)
+
 
 class MQTTPublishError(Exception):
     pass
+
 
 class MQTTClient:
     def __init__(self, config: Config, device: Device):
         self.config = config
         self.device = device
 
-        self.client = mqtt.Client(
+        self.client = Client(
             client_id=f"{APP_NAME}_{device.serial_no}", clean_session=False
         )
         self.client.will_set(
@@ -58,16 +63,35 @@ class MQTTClient:
     def __getattr__(self, attr):
         return getattr(self.client, attr)
 
-    def publish(self, topic: str, payload: t.Any, json=False) -> mqtt.MQTTMessage:
-        msg = self.client.publish(
-            topic,
-            payload=dumps(payload) if json else str(payload),
-            qos=self.config.mqtt_qos,
-            retain=True
-        )
+    @property
+    def on_message(self):
+        return self.client.on_message
 
-        if msg.rc == mqtt.MQTT_ERR_SUCCESS:
+    @on_message.setter
+    def on_message(self, on_message):
+        self.client.on_message = on_message
+
+    @property
+    def on_disconnect(self):
+        return self.client.on_disconnect
+
+    @on_disconnect.setter
+    def on_disconnect(self, on_disconnect):
+        self.client.on_disconnect = on_disconnect
+
+    def publish(self, topic: str, payload: t.Any, json=False) -> MQTTMessage:
+        msg = self.client.publish(topic, self.transform_payload(payload, json), qos=self.config.mqtt_qos, retain=True)
+
+        if msg.rc == MQTT_ERR_SUCCESS:
             msg.wait_for_publish()
             return msg
 
-        raise MQTTPublishError(f"Error publishing MQTT message: {mqtt.error_string(msg.rc)}")
+        raise MQTTPublishError(f"Error publishing MQTT message: {error_string(msg.rc)}")
+
+    @staticmethod
+    def transform_payload(payload: t.Any, json: bool) -> str:
+        if json:
+            return dumps(payload)
+        if isinstance(payload, bytes):
+            return payload.decode()
+        return str(payload)
