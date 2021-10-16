@@ -7,6 +7,8 @@ from slugify import slugify as _slugify
 
 SYS_WINDOWS = platform.system().lower() == "windows"
 
+_T = t.TypeVar("_T", int, float)
+
 def ping(host: str, timeout: t.Union[float, int, timedelta]=None) -> bool:
 	if isinstance(timeout, timedelta):
 		timeout = timeout.total_seconds()
@@ -29,3 +31,10 @@ def ping(host: str, timeout: t.Union[float, int, timedelta]=None) -> bool:
 
 def slugify(text: str) -> str:
 	return _slugify(text, separator="_")
+
+def clamp(value: _T, *, min:t.Optional[t.Union[int, float]]=None, max:t.Optional[t.Union[int, float]]=None) -> _T:
+	if min is not None and value < min:
+		value = min
+	if max is not None and value > max:
+		value = max
+	return value
