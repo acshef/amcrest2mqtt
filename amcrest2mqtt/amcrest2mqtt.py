@@ -169,7 +169,7 @@ class Amcrest2MQTT:
             siren_volume = self.camera.get_config("VideoTalkPhoneGeneral.RingVolume", int)
             self.entity_siren_volume.publish(siren_volume)
         else:
-            logger.warning(f'Unsupported topic "{message.topic}"')
+            logger.warning(f'Received message at unsupported command topic "{message.topic}"')
 
     def exit_gracefully(self, rc: int, skip_mqtt=False):
         logger.info("Exiting app...")
