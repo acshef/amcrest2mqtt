@@ -30,7 +30,7 @@ class Entity:
 		self.component = component
 		self.api = api
 		self.__friendly_name = friendly_name
-		self.command_topics = {}
+		self.command_topics: t.Dict[str, str] = {}
 		self.extra_config = extra_config
 
 		if command_topics:
