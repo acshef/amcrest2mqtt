@@ -22,16 +22,8 @@ class MQTTClient:
     def __init__(self, config: Config, device: Device):
         self.config = config
         self.device = device
-
-        self.client = Client(
-            client_id=f"{APP_NAME}_{device.serial_no}", clean_session=False
-        )
-        self.client.will_set(
-            device.status_topic,
-            payload=PAYLOAD_OFFLINE,
-            qos=config.mqtt_qos,
-            retain=True
-        )
+        self.client = Client(client_id=self.client_id, clean_session=False)
+        self.client.will_set(device.status_topic, payload=PAYLOAD_OFFLINE, qos=config.mqtt_qos, retain=True)
 
         if config.mqtt_tls_enabled:
             logger.info(f"Setting up MQTT for TLS")
@@ -62,6 +54,13 @@ class MQTTClient:
 
     def __getattr__(self, attr):
         return getattr(self.client, attr)
+
+    @property
+    def client_id(self):
+        id_ = f"{APP_NAME}_{self.device.serial_no}"
+        if self.config.mqtt_client_suffix:
+            id_ = f"{id_}_{self.config.mqtt_client_suffix}"
+        return id_
 
     @property
     def on_message(self):

@@ -17,6 +17,7 @@ class Config(NamedTuple):
 	mqtt_port: int
 	mqtt_username: str
 	mqtt_password: Optional[str]
+	mqtt_client_suffix: Optional[str]
 	mqtt_tls_enabled: bool
 	mqtt_tls_ca_cert: str
 	mqtt_tls_cert: str
@@ -39,6 +40,7 @@ class Config(NamedTuple):
 			mqtt_port=int(getenv(ENV_MQTT_PORT) or DEFAULT_MQTT_PORT),
 			mqtt_username=getenv(ENV_MQTT_USERNAME),
 			mqtt_password=getenv(ENV_MQTT_PASSWORD),  # can be None
+			mqtt_client_suffix=getenv(ENV_MQTT_CLIENT_SUFFIX),  # can be None
 			mqtt_tls_enabled=get_boolenv(ENV_MQTT_TLS_ENABLED),
 			mqtt_tls_ca_cert=getenv(ENV_MQTT_TLS_CA_CERT),
 			mqtt_tls_cert=getenv(ENV_MQTT_TLS_CERT),
