@@ -234,6 +234,7 @@ class Amcrest2MQTT:
                     "Lighting_V2[0][0][1].Mode": "ForceOn",
                     "Lighting_V2[0][0][1].State": set_config_state
                 })
+                self.entity_flashlight.publish(payload, "effect")
             else:
                 logger.warning(f"Unknown Flashlight effect payload {payload}")
         else:
