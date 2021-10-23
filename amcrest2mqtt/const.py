@@ -49,8 +49,8 @@ ICON_FLASHLIGHT = "mdi:flashlight"
 ICON_MICRO_SD = "mdi:micro-sd"
 ICON_VOLUME_HIGH = "mdi:volume-high"
 
-LIGHT_MODE_SOLID = "Solid"
-LIGHT_MODE_STROBE = "Strobe"
+LIGHT_EFFECT_NONE = "None"
+LIGHT_EFFECT_STROBE = "Strobe (30sec)"
 
 PAYLOAD_ON = "on"
 PAYLOAD_OFF = "off"

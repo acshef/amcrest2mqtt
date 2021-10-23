@@ -143,8 +143,8 @@ class Entity:
 		},
 		"effect_state_topic": "~/effect",
 		"effect_list": [
-			LIGHT_MODE_SOLID,
-			LIGHT_MODE_STROBE
+			LIGHT_EFFECT_NONE,
+			LIGHT_EFFECT_STROBE
 		],
 		"icon": ICON_FLASHLIGHT
 	}

@@ -26,8 +26,11 @@ class Camera:
 		_, _, value = line.partition("=")
 		return type(value.strip())
 
-	def set_config(self, name: str, value: t.Any):
-		ret = self._camera.command(f"configManager.cgi?action=setConfig&{name}={value}")
+	def set_config(self, values: t.Dict[str,t.Any]):
+		url = "configManager.cgi?action=setConfig"
+		for key, value in values.items():
+			url += f"&{key}={value}"
+		ret = self._camera.command(url)
 		return "ok" in ret.content.decode().lower()
 
 	def get_device(self):

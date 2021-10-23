@@ -2,7 +2,7 @@ import logging
 import os
 import signal
 import sys
-from threading import Timer
+from threading import Thread, Timer
 import typing as t
 
 from .camera import Camera, AmcrestError
@@ -162,14 +162,10 @@ class Amcrest2MQTT:
             self.exit_gracefully(rc, skip_mqtt=True)
 
     def on_mqtt_message(self, client, userdata, message: MQTTMessage):
-        if self.is_ad410 and message.topic == self.entity_siren_volume.command_topics["command"]:
-            new_volume = clamp(int(message.payload), min=0, max=100)
-            logger.info(f"Setting Siren Volume to {new_volume}%")
-            self.camera.set_config("VideoTalkPhoneGeneral.RingVolume", new_volume)
-            siren_volume = self.camera.get_config("VideoTalkPhoneGeneral.RingVolume", int)
-            self.entity_siren_volume.publish(siren_volume)
-        else:
-            logger.warning(f'Received message at unsupported command topic "{message.topic}"')
+        handler_thread = Thread(
+            target=self.handle_mqtt_message, args=(message.topic, message.payload.decode()), daemon=True
+        )
+        handler_thread.start()
 
     def exit_gracefully(self, rc: int, skip_mqtt=False):
         logger.info("Exiting app...")
@@ -196,16 +192,52 @@ class Amcrest2MQTT:
             self.entity_doorbell.publish(doorbell_payload)
         elif code == "LeFunctionStatusSync" and payload["data"]["Function"] == "WightLight":
             light_payload = PAYLOAD_ON if payload["data"]["Status"] == "true" else PAYLOAD_OFF
-            light_mode = (
-                LIGHT_MODE_STROBE
-                if light_payload == PAYLOAD_ON and "true" in payload["data"]["Flicker"]
-                else LIGHT_MODE_SOLID
-            )
+            light_mode = LIGHT_EFFECT_STROBE if "true" in payload["data"]["Flicker"] else LIGHT_EFFECT_NONE
             self.entity_flashlight.publish(light_payload)
             self.entity_flashlight.publish(light_mode, "effect")
 
         self.mqtt_publish(self.device.event_topic, payload, json=True)
         logger.info(str(payload))
+
+    def handle_mqtt_message(self, topic: str, payload: str):
+        if self.is_ad410 and topic == self.entity_siren_volume.command_topics["command"]:
+            new_volume = clamp(int(payload), min=0, max=100)
+            logger.info(f"Setting Siren Volume to {new_volume}%")
+            self.camera.set_config({"VideoTalkPhoneGeneral.RingVolume": new_volume})
+            siren_volume = self.camera.get_config("VideoTalkPhoneGeneral.RingVolume", int)
+            self.entity_siren_volume.publish(siren_volume)
+        elif self.is_ad410 and topic == self.entity_flashlight.command_topics["command"]:
+            if payload == PAYLOAD_ON:
+                logger.info(f"Setting Flashlight to {payload}")
+                self.camera.set_config({
+                    "Lighting_V2[0][0][1].Mode": "ForceOn",
+                    "Lighting_V2[0][0][1].State": "On"
+                })
+                self.entity_flashlight.publish(PAYLOAD_ON)
+                self.entity_flashlight.publish(LIGHT_EFFECT_NONE, "effect")
+            elif payload == PAYLOAD_OFF:
+                logger.info(f"Setting Flashlight to {payload}")
+                self.camera.set_config({"Lighting_V2[0][0][1].Mode": "Off"})
+                self.entity_flashlight.publish(PAYLOAD_OFF)
+            else:
+                logger.warning(f"Unknown Flashlight payload {payload}")
+        elif self.is_ad410 and topic == self.entity_flashlight.command_topics["effect_command"]:
+            set_config_state = None
+            if payload == LIGHT_EFFECT_NONE:
+                set_config_state = "On"
+            elif payload == LIGHT_EFFECT_STROBE:
+                set_config_state = "Flicker"
+
+            if set_config_state:
+                logger.info(f"Setting Flashlight mode to {payload}")
+                self.camera.set_config({
+                    "Lighting_V2[0][0][1].Mode": "ForceOn",
+                    "Lighting_V2[0][0][1].State": set_config_state
+                })
+            else:
+                logger.warning(f"Unknown Flashlight effect payload {payload}")
+        else:
+            logger.warning(f'Received message at unsupported command topic "{topic}"')
 
     def refresh_config_sensors(self):
         Timer(self.config.config_poll_interval, self.refresh_config_sensors).start()
