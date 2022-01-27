@@ -107,13 +107,6 @@ class Amcrest2MQTT:
         logger.info("Performing initial camera ping...")
         self.ping_camera()
 
-        if self.is_ad410:
-            try:
-                siren_volume = self.camera.get_config(CONFIG_SIREN_VOLUME, int)
-                self.entity_siren_volume.publish(siren_volume)
-            except:
-                pass
-
         logger.info("Listening for events...")
 
         try:
