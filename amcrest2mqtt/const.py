@@ -62,3 +62,8 @@ TIME_CAMERA_PING_TIMEOUT = 100 # Seconds
 
 UNITS_PERCENTAGE = "%"
 UNITS_GIGABYTES = "GB"
+
+CONFIG_SIREN_VOLUME = "VideoTalkPhoneGeneral.RingVolume"
+CONFIG_LIGHT_MODE = "Lighting_V2[0][0][1].Mode"
+CONFIG_LIGHT_STATE = "Lighting_V2[0][0][1].State"
+CONFIG_WATERMARK = "VideoWidget[0].PictureTitle.EncodeBlend"

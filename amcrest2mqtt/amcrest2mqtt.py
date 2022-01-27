@@ -109,7 +109,7 @@ class Amcrest2MQTT:
 
         if self.is_ad410:
             try:
-                siren_volume = self.camera.get_config("VideoTalkPhoneGeneral.RingVolume", int)
+                siren_volume = self.camera.get_config(CONFIG_SIREN_VOLUME, int)
                 self.entity_siren_volume.publish(siren_volume)
             except:
                 pass
@@ -203,21 +203,21 @@ class Amcrest2MQTT:
         if self.is_ad410 and topic == self.entity_siren_volume.command_topics["command"]:
             new_volume = clamp(int(payload), min=0, max=100)
             logger.info(f"Setting Siren Volume to {new_volume}%")
-            self.camera.set_config({"VideoTalkPhoneGeneral.RingVolume": new_volume})
-            siren_volume = self.camera.get_config("VideoTalkPhoneGeneral.RingVolume", int)
+            self.camera.set_config({CONFIG_SIREN_VOLUME: new_volume})
+            siren_volume = self.camera.get_config(CONFIG_SIREN_VOLUME, int)
             self.entity_siren_volume.publish(siren_volume)
         elif self.is_ad410 and topic == self.entity_flashlight.command_topics["command"]:
             if payload == PAYLOAD_ON:
                 logger.info(f"Setting Flashlight to {payload}")
                 self.camera.set_config({
-                    "Lighting_V2[0][0][1].Mode": "ForceOn",
-                    "Lighting_V2[0][0][1].State": "On"
+                    CONFIG_LIGHT_MODE: "ForceOn",
+                    CONFIG_LIGHT_STATE: "On"
                 })
                 self.entity_flashlight.publish(PAYLOAD_ON)
                 self.entity_flashlight.publish(LIGHT_EFFECT_NONE, "effect")
             elif payload == PAYLOAD_OFF:
                 logger.info(f"Setting Flashlight to {payload}")
-                self.camera.set_config({"Lighting_V2[0][0][1].Mode": "Off"})
+                self.camera.set_config({CONFIG_LIGHT_MODE: "Off"})
                 self.entity_flashlight.publish(PAYLOAD_OFF)
             else:
                 logger.warning(f"Unknown Flashlight payload {payload}")
@@ -231,8 +231,8 @@ class Amcrest2MQTT:
             if set_config_state:
                 logger.info(f"Setting Flashlight mode to {payload}")
                 self.camera.set_config({
-                    "Lighting_V2[0][0][1].Mode": "ForceOn",
-                    "Lighting_V2[0][0][1].State": set_config_state
+                    CONFIG_LIGHT_MODE: "ForceOn",
+                    CONFIG_LIGHT_STATE: set_config_state
                 })
                 self.entity_flashlight.publish(payload, "effect")
             else:
@@ -245,7 +245,7 @@ class Amcrest2MQTT:
         logger.info("Fetching config sensors...")
 
         if self.is_ad410:
-            siren_volume = self.camera.get_config("VideoTalkPhoneGeneral.RingVolume", int)
+            siren_volume = self.camera.get_config(CONFIG_SIREN_VOLUME, int)
             self.entity_siren_volume.publish(siren_volume)
 
     def refresh_storage_sensors(self):
