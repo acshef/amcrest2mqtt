@@ -1,7 +1,5 @@
 from typing import NamedTuple
 
-from amcrest import AmcrestCamera
-
 from .const import *
 from .util import slugify
 
