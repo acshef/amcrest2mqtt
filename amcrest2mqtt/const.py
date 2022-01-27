@@ -43,11 +43,13 @@ COMPONENT_BINARY_SENSOR = "binary_sensor"
 COMPONENT_LIGHT = "light"
 COMPONENT_NUMBER = "number"
 COMPONENT_SENSOR = "sensor"
+COMPONENT_SWITCH = "switch"
 
 ICON_FACE_RECOGNITION = "mdi:face-recognition"
 ICON_FLASHLIGHT = "mdi:flashlight"
 ICON_MICRO_SD = "mdi:micro-sd"
 ICON_VOLUME_HIGH = "mdi:volume-high"
+ICON_WATERMARK = "mdi:watermark"
 
 LIGHT_EFFECT_NONE = "None"
 LIGHT_EFFECT_STROBE = "Strobe (30sec)"

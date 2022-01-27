@@ -38,7 +38,7 @@ class Entity:
 				self.extra_config[f"{command}_topic"] = topic
 				self.command_topics[command] = self.absolute_topic(topic)
 
-		if component in (COMPONENT_BINARY_SENSOR, COMPONENT_LIGHT):
+		if component in (COMPONENT_BINARY_SENSOR, COMPONENT_LIGHT, COMPONENT_SWITCH):
 			self.extra_config["payload_on"] = PAYLOAD_ON
 			self.extra_config["payload_off"] = PAYLOAD_OFF
 
@@ -182,4 +182,12 @@ class Entity:
 		"min": 0,
 		"max": 100,
 		"step": 1,
+	}
+	DEF_WATERMARK = {
+		"name": "Watermark",
+		"component": COMPONENT_SWITCH,
+		"icon": ICON_WATERMARK,
+		"command_topics": {
+			"command": "~/set"
+		},
 	}

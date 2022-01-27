@@ -10,7 +10,7 @@ from .config import Config
 from .const import *
 from .entity import Entity
 from .mqtt_client import MQTTClient, MQTTMessage
-from .util import clamp, ping
+from .util import clamp, ping, str2bool
 
 
 _is_exiting = False # Global
@@ -73,6 +73,7 @@ class Amcrest2MQTT:
         self.entity_storage_used = self.create_entity(**Entity.DEF_STORAGE_USED)
         self.entity_storage_total = self.create_entity(**Entity.DEF_STORAGE_TOTAL)
         self.entity_siren_volume = self.create_entity(**Entity.DEF_SIREN_VOLUME)
+        self.entity_watermark = self.create_entity(**Entity.DEF_WATERMARK)
 
         # Configure Home Assistant
         if self.config.ha_enabled:
@@ -85,6 +86,7 @@ class Amcrest2MQTT:
                 self.entity_human.setup_ha()
                 self.entity_flashlight.setup_ha()
                 self.entity_siren_volume.setup_ha()
+                self.entity_watermark.setup_ha()
 
             self.entity_motion.setup_ha()
 
@@ -193,7 +195,13 @@ class Amcrest2MQTT:
         logger.info(str(payload))
 
     def handle_mqtt_message(self, topic: str, payload: str):
-        if self.is_ad410 and topic == self.entity_siren_volume.command_topics["command"]:
+        if self.is_ad410 and topic == self.entity_watermark.command_topics["command"]:
+            new_value = "true" if payload == PAYLOAD_ON else "false"
+            logger.info(f"Setting watermark to {new_value}")
+            self.camera.set_config({CONFIG_WATERMARK: new_value})
+            watermark_is_enabled = self.camera.get_config(CONFIG_WATERMARK, str2bool)
+            self.entity_watermark.publish(PAYLOAD_ON if watermark_is_enabled else PAYLOAD_OFF)
+        elif self.is_ad410 and topic == self.entity_siren_volume.command_topics["command"]:
             new_volume = clamp(int(payload), min=0, max=100)
             logger.info(f"Setting Siren Volume to {new_volume}%")
             self.camera.set_config({CONFIG_SIREN_VOLUME: new_volume})
@@ -240,6 +248,9 @@ class Amcrest2MQTT:
         if self.is_ad410:
             siren_volume = self.camera.get_config(CONFIG_SIREN_VOLUME, int)
             self.entity_siren_volume.publish(siren_volume)
+
+            watermark_is_enabled = self.camera.get_config(CONFIG_WATERMARK, str2bool)
+            self.entity_watermark.publish(PAYLOAD_ON if watermark_is_enabled else PAYLOAD_OFF)
 
     def refresh_storage_sensors(self):
         Timer(self.config.storage_poll_interval, self.refresh_storage_sensors).start()
