@@ -38,3 +38,6 @@ def clamp(value: _T, *, min:t.Optional[t.Union[int, float]]=None, max:t.Optional
 	if max is not None and value > max:
 		value = max
 	return value
+
+def str2bool(value: t.Any) -> bool:
+	return str(value).lower() == "true"
