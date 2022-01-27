@@ -199,14 +199,12 @@ class Amcrest2MQTT:
             new_value = "true" if payload == PAYLOAD_ON else "false"
             logger.info(f"Setting watermark to {new_value}")
             self.camera.set_config({CONFIG_WATERMARK: new_value})
-            watermark_is_enabled = self.camera.get_config(CONFIG_WATERMARK, str2bool)
-            self.entity_watermark.publish(PAYLOAD_ON if watermark_is_enabled else PAYLOAD_OFF)
+            self._refresh_config_watermark()
         elif self.is_ad410 and topic == self.entity_siren_volume.command_topics["command"]:
             new_volume = clamp(int(payload), min=0, max=100)
             logger.info(f"Setting Siren Volume to {new_volume}%")
             self.camera.set_config({CONFIG_SIREN_VOLUME: new_volume})
-            siren_volume = self.camera.get_config(CONFIG_SIREN_VOLUME, int)
-            self.entity_siren_volume.publish(siren_volume)
+            self._refresh_config_siren_volume()
         elif self.is_ad410 and topic == self.entity_flashlight.command_topics["command"]:
             if payload == PAYLOAD_ON:
                 logger.info(f"Setting Flashlight to {payload}")
@@ -241,16 +239,21 @@ class Amcrest2MQTT:
         else:
             logger.warning(f'Received message at unsupported command topic "{topic}"')
 
+    def _refresh_config_siren_volume(self):
+        siren_volume = self.camera.get_config(CONFIG_SIREN_VOLUME, int)
+        self.entity_siren_volume.publish(siren_volume)
+
+    def _refresh_config_watermark(self):
+        watermark_is_enabled = self.camera.get_config(CONFIG_WATERMARK, str2bool)
+        self.entity_watermark.publish(PAYLOAD_ON if watermark_is_enabled else PAYLOAD_OFF)
+
     def refresh_config_sensors(self):
         Timer(self.config.config_poll_interval, self.refresh_config_sensors).start()
         logger.info("Fetching config sensors...")
 
         if self.is_ad410:
-            siren_volume = self.camera.get_config(CONFIG_SIREN_VOLUME, int)
-            self.entity_siren_volume.publish(siren_volume)
-
-            watermark_is_enabled = self.camera.get_config(CONFIG_WATERMARK, str2bool)
-            self.entity_watermark.publish(PAYLOAD_ON if watermark_is_enabled else PAYLOAD_OFF)
+            self._refresh_config_siren_volume()
+            self._refresh_config_watermark()
 
     def refresh_storage_sensors(self):
         Timer(self.config.storage_poll_interval, self.refresh_storage_sensors).start()
