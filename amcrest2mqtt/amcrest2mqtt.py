@@ -74,6 +74,7 @@ class Amcrest2MQTT:
         self.entity_storage_total = self.create_entity(**Entity.DEF_STORAGE_TOTAL)
         self.entity_siren_volume = self.create_entity(**Entity.DEF_SIREN_VOLUME)
         self.entity_watermark = self.create_entity(**Entity.DEF_WATERMARK)
+        self.entity_indicator_light = self.create_entity(**Entity.DEF_INDICATOR_LIGHT)
 
         # Configure Home Assistant
         if self.config.ha_enabled:
@@ -87,6 +88,7 @@ class Amcrest2MQTT:
                 self.entity_flashlight.setup_ha()
                 self.entity_siren_volume.setup_ha()
                 self.entity_watermark.setup_ha()
+                self.entity_indicator_light.setup_ha()
 
             self.entity_motion.setup_ha()
 
@@ -195,6 +197,11 @@ class Amcrest2MQTT:
         logger.info(str(payload))
 
     def handle_mqtt_message(self, topic: str, payload: str):
+        if self.is_ad410 and topic == self.entity_indicator_light.command_topics["command"]:
+            new_value = "true" if payload == PAYLOAD_ON else "false"
+            logger.info(f"Setting indicator light to {new_value}")
+            self.camera.set_config({CONFIG_INDICATOR_LIGHT: new_value})
+            self._refresh_config_indicator_light()
         if self.is_ad410 and topic == self.entity_watermark.command_topics["command"]:
             new_value = "true" if payload == PAYLOAD_ON else "false"
             logger.info(f"Setting watermark to {new_value}")
@@ -247,6 +254,10 @@ class Amcrest2MQTT:
         watermark_is_enabled = self.camera.get_config(CONFIG_WATERMARK, str2bool)
         self.entity_watermark.publish(PAYLOAD_ON if watermark_is_enabled else PAYLOAD_OFF)
 
+    def _refresh_config_indicator_light(self):
+        indicator_light_is_enabled = self.camera.get_config(CONFIG_INDICATOR_LIGHT, str2bool)
+        self.entity_indicator_light.publish(PAYLOAD_ON if indicator_light_is_enabled else PAYLOAD_OFF)
+
     def refresh_config_sensors(self):
         Timer(self.config.config_poll_interval, self.refresh_config_sensors).start()
         logger.info("Fetching config sensors...")
@@ -254,6 +265,7 @@ class Amcrest2MQTT:
         if self.is_ad410:
             self._refresh_config_siren_volume()
             self._refresh_config_watermark()
+            self._refresh_config_indicator_light()
 
     def refresh_storage_sensors(self):
         Timer(self.config.storage_poll_interval, self.refresh_storage_sensors).start()

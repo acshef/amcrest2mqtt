@@ -126,7 +126,8 @@ class Entity:
 
 	DEF_DOORBELL = {
 		"name": "Doorbell",
-		"component": COMPONENT_BINARY_SENSOR
+		"component": COMPONENT_BINARY_SENSOR,
+		"icon": ICON_RADIOBOX_MARKED,
 	}
 	DEF_HUMAN = {
 		"name": "Human",
@@ -189,5 +190,13 @@ class Entity:
 		"icon": ICON_WATERMARK,
 		"command_topics": {
 			"command": "~/set"
+		},
+	}
+	DEF_INDICATOR_LIGHT = {
+		"name": "Indicator Light",
+		"component": COMPONENT_LIGHT,
+		"icon": ICON_CIRCLE_OUTLINE,
+		"command_topics": {
+			"command": "~/set",
 		},
 	}
