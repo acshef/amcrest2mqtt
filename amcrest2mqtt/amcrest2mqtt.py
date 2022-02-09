@@ -199,12 +199,12 @@ class Amcrest2MQTT:
     def handle_mqtt_message(self, topic: str, payload: str):
         if self.is_ad410 and topic == self.entity_indicator_light.command_topics["command"]:
             new_value = "true" if payload == PAYLOAD_ON else "false"
-            logger.info(f"Setting indicator light to {new_value}")
+            logger.info(f"Setting Indicator Light to {new_value}")
             self.camera.set_config({CONFIG_INDICATOR_LIGHT: new_value})
             self._refresh_config_indicator_light()
-        if self.is_ad410 and topic == self.entity_watermark.command_topics["command"]:
+        elif self.is_ad410 and topic == self.entity_watermark.command_topics["command"]:
             new_value = "true" if payload == PAYLOAD_ON else "false"
-            logger.info(f"Setting watermark to {new_value}")
+            logger.info(f"Setting Watermark to {new_value}")
             self.camera.set_config({CONFIG_WATERMARK: new_value})
             self._refresh_config_watermark()
         elif self.is_ad410 and topic == self.entity_siren_volume.command_topics["command"]:
