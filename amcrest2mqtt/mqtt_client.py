@@ -1,4 +1,4 @@
-import logging, ssl, sys
+import logging, ssl
 from json import dumps
 import typing as t
 
