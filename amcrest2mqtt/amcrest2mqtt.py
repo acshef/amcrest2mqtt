@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 import os
 import signal
@@ -6,7 +7,6 @@ from threading import Thread, Timer
 import typing as t
 
 from .camera import Camera, AmcrestError
-from .config import Config
 from .const import *
 from .entity import Entity
 from .mqtt_client import MQTTClient, MQTTMessage
@@ -19,32 +19,51 @@ _is_exiting = False  # Global
 logger = logging.getLogger(__name__)
 
 
+@dataclasses.dataclass(init=True, repr=False, eq=False, order=False)
 class Amcrest2MQTT:
-    def __init__(self):
-        self.config = Config.from_env()
+    amcrest_host: str = MISSING
+    amcrest_port: int = DEFAULT_AMCREST_PORT
+    amcrest_username: str = DEFAULT_AMCREST_USERNAME
+    amcrest_password: str = MISSING
+    storage_poll_interval: int = DEFAULT_STORAGE_POLL_INTERVAL
+    config_poll_interval: int = DEFAULT_CONFIG_POLL_INTERVAL
+    mqtt_host: str = DEFAULT_MQTT_HOST
+    mqtt_qos: int = DEFAULT_MQTT_QOS
+    mqtt_port: int = DEFAULT_MQTT_PORT
+    mqtt_username: str = MISSING
+    mqtt_password: t.Optional[str] = None
+    mqtt_client_suffix: t.Optional[str] = None
+    mqtt_tls_ca_cert: t.Optional[str] = None
+    mqtt_tls_cert: t.Optional[str] = None
+    mqtt_tls_key: t.Optional[str] = None
+    ha_prefix: t.Optional[str] = DEFAULT_HOME_ASSISTANT_PREFIX
+
+    def __post_init__(self):
+        if self.amcrest_host is MISSING:
+            raise TypeError("Amcrest2MQTT() requires str argument 'amcrest_host'")
+        if self.amcrest_password is MISSING:
+            raise TypeError("Amcrest2MQTT() requires str argument 'amcrest_password'")
+        if self.mqtt_username is MISSING:
+            raise TypeError("Amcrest2MQTT() requires str argument 'mqtt_username'")
 
     def run(self):
         from amcrest2mqtt import __version__
 
         logger.info(f"{APP_NAME} v{__version__}")
 
-        # Exit if any of the required vars are not provided
-        if self.config.amcrest_host is None:
-            logger.error(f"Environment variable {ENV_AMCREST_HOST} must be set")
-            sys.exit(1)
-
-        if self.config.amcrest_password is None:
-            logger.error(f"Environment variable {ENV_AMCREST_PASSWORD} must be set")
-            sys.exit(1)
-
-        if self.config.mqtt_username is None:
-            logger.error(f"Environment variable {ENV_MQTT_USERNAME} must be set")
-            sys.exit(1)
-
         # Handle interruptions
         signal.signal(signal.SIGINT, self.signal_handler)
 
-        self.camera = Camera.from_config(self.config)
+        try:
+            self.camera = Camera(
+                self.amcrest_host,
+                self.amcrest_port,
+                self.amcrest_username,
+                self.amcrest_password,
+            )
+        except Exception as exc:
+            logger.error(f"Could not connect to Amcrest camera device: {exc}")
+            sys.exit(1)
 
         logger.info("Fetching camera details")
 
@@ -59,7 +78,18 @@ class Amcrest2MQTT:
         logger.info(f"Software version: {self.device.sw_version}")
 
         try:
-            self.mqtt_client = MQTTClient(config=self.config, device=self.device)
+            self.mqtt_client = MQTTClient(
+                host=self.mqtt_host,
+                port=self.mqtt_port,
+                username=self.mqtt_username,
+                password=self.mqtt_password,
+                qos=self.mqtt_qos,
+                client_suffix=self.mqtt_client_suffix,
+                tls_ca_cert=self.mqtt_tls_ca_cert,
+                tls_cert=self.mqtt_tls_cert,
+                tls_key=self.mqtt_tls_key,
+                device=self.device,
+            )
             self.mqtt_client.on_disconnect = self.on_mqtt_disconnect
             self.mqtt_client.on_message = self.on_mqtt_message
         except Exception as exc:
@@ -79,7 +109,7 @@ class Amcrest2MQTT:
         self.entity_indicator_light = self.create_entity(**Entity.DEF_INDICATOR_LIGHT)
 
         # Configure Home Assistant
-        if self.config.ha_enabled:
+        if self.ha_prefix:
             logger.info("Writing Home Assistant discovery config...")
 
             if self.is_doorbell:
@@ -94,7 +124,7 @@ class Amcrest2MQTT:
 
             self.entity_motion.setup_ha()
 
-            if self.config.storage_poll_interval > 0:
+            if self.storage_poll_interval > 0:
                 self.entity_storage_used_percent.setup_ha()
                 self.entity_storage_used.setup_ha()
                 self.entity_storage_total.setup_ha()
@@ -102,18 +132,18 @@ class Amcrest2MQTT:
         # Begin main behavior
         self.mqtt_publish(self.device.status_topic, PAYLOAD_ONLINE)
 
-        if self.config.config_poll_interval > 0:
+        if self.config_poll_interval > 0:
             logger.info("Performing initial check of config sensors...")
             self.refresh_config_sensors()
 
-        if self.config.storage_poll_interval > 0:
+        if self.storage_poll_interval > 0:
             logger.info("Performing initial check of storage sensors...")
             self.refresh_storage_sensors()
 
         logger.info("Performing initial camera ping...")
         self.ping_camera()
 
-        logger.info("Listening for events...")
+        logger.info("Entering infinite loop; listening for events...")
 
         try:
             for code, payload in self.camera.events():
@@ -147,7 +177,7 @@ class Amcrest2MQTT:
                 self.exit_gracefully(1, skip_mqtt=True)
 
     def create_entity(
-            self,
+        self,
         name: str,
         component: str,
         *,
@@ -246,7 +276,7 @@ class Amcrest2MQTT:
                 logger.info(f"Setting Flashlight mode to {payload}")
                 self.camera.set_config(
                     {
-                    CONFIG_LIGHT_MODE: "ForceOn",
+                        CONFIG_LIGHT_MODE: "ForceOn",
                         CONFIG_LIGHT_STATE: set_config_state,
                     }
                 )
@@ -271,7 +301,7 @@ class Amcrest2MQTT:
         )
 
     def refresh_config_sensors(self):
-        Timer(self.config.config_poll_interval, self.refresh_config_sensors).start()
+        Timer(self.config_poll_interval, self.refresh_config_sensors).start()
         logger.info("Fetching config sensors...")
 
         if self.is_ad410:
@@ -280,7 +310,7 @@ class Amcrest2MQTT:
             self._refresh_config_indicator_light()
 
     def refresh_storage_sensors(self):
-        Timer(self.config.storage_poll_interval, self.refresh_storage_sensors).start()
+        Timer(self.storage_poll_interval, self.refresh_storage_sensors).start()
         logger.info("Fetching storage sensors...")
 
         try:
@@ -294,7 +324,7 @@ class Amcrest2MQTT:
     def ping_camera(self):
         Timer(TIME_CAMERA_PING_INTERVAL, self.ping_camera).start()
 
-        if not ping(self.config.amcrest_host, timeout=TIME_CAMERA_PING_TIMEOUT):
+        if not ping(self.amcrest_host, timeout=TIME_CAMERA_PING_TIMEOUT):
             logger.error("Ping unsuccessful")
             self.exit_gracefully(1)
 

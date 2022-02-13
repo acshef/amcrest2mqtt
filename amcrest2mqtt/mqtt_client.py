@@ -4,7 +4,6 @@ import typing as t
 
 from paho.mqtt.client import Client, MQTTMessage, MQTT_ERR_SUCCESS, error_string
 
-from .config import Config
 from .const import *
 from .device import Device
 
@@ -19,37 +18,38 @@ class MQTTPublishError(Exception):
 
 
 class MQTTClient:
-    def __init__(self, config: Config, device: Device):
-        self.config = config
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        username: str,
+        password: t.Optional[str] = None,
+        *,
+        qos: int = DEFAULT_MQTT_QOS,
+        client_suffix: t.Optional[str] = None,
+        tls_ca_cert: t.Optional[str] = None,
+        tls_cert: t.Optional[str] = None,
+        tls_key: t.Optional[str] = None,
+        device: Device,
+    ):
         self.device = device
+        self.client_suffix = client_suffix
+        self.qos = qos
         self.client = Client(client_id=self.client_id, clean_session=False)
-        self.client.will_set(device.status_topic, payload=PAYLOAD_OFFLINE, qos=config.mqtt_qos, retain=True)
+        self.client.will_set(device.status_topic, payload=PAYLOAD_OFFLINE, qos=qos, retain=True)
 
-        if config.mqtt_tls_enabled:
-            logger.info(f"Setting up MQTT for TLS")
-            if config.mqtt_tls_ca_cert is None:
-                logger.error(f"When MQTT TLS is enabled, environment variable {ENV_MQTT_TLS_CA_CERT} must be set")
-                sys.exit(1)
-            if config.mqtt_tls_cert is None:
-                logger.error(f"When MQTT TLS is enabled, environment variable {ENV_MQTT_TLS_CERT} must be set")
-                sys.exit(1)
-            if config.mqtt_tls_cert is None:
-                logger.error(f"When MQTT TLS is enabled, environment variable {ENV_MQTT_TLS_KEY} must be set")
-                sys.exit(1)
+        if tls_ca_cert or tls_cert or tls_key:
             self.client.tls_set(
-                ca_certs=config.mqtt_tls_ca_cert,
-                certfile=config.mqtt_tls_cert,
-                keyfile=config.mqtt_tls_key,
+                ca_certs=tls_ca_cert,
+                certfile=tls_cert,
+                keyfile=tls_key,
                 cert_reqs=ssl.CERT_REQUIRED,
                 tls_version=ssl.PROTOCOL_TLS,
             )
         else:
-            self.client.username_pw_set(
-                username=config.mqtt_username,
-                password=config.mqtt_password
-            )
+            self.client.username_pw_set(username=username, password=password)
 
-        self.client.connect(config.mqtt_host, port=config.mqtt_port)
+        self.client.connect(host, port=port)
         self.client.loop_start()
 
     def __getattr__(self, attr):
@@ -58,8 +58,8 @@ class MQTTClient:
     @property
     def client_id(self):
         id_ = f"{APP_NAME}_{self.device.serial_no}"
-        if self.config.mqtt_client_suffix:
-            id_ = f"{id_}_{self.config.mqtt_client_suffix}"
+        if self.client_suffix:
+            id_ = f"{id_}_{self.client_suffix}"
         return id_
 
     @property
