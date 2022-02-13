@@ -20,13 +20,13 @@ class Camera:
 	def __getattr__(self, attr):
 		return getattr(self._camera, attr)
 
-	def get_config(self, name: str, type: t.Callable[[str], _T]=str) -> _T:
+    def get_config(self, name: str, type: t.Callable[[str], _T] = str) -> _T:
 		ret = self._camera.command(f"configManager.cgi?action=getConfig&name={name}")
-		line = ret.content.decode().strip() # Should be of the form "key.subkey.subsubkey=value"
+        line = ret.content.decode().strip()  # Should be of the form "key.subkey.subsubkey=value"
 		_, _, value = line.partition("=")
 		return type(value.strip())
 
-	def set_config(self, values: t.Dict[str,t.Any]):
+    def set_config(self, values: t.Dict[str, t.Any]):
 		url = "configManager.cgi?action=setConfig"
 		for key, value in values.items():
 			url += f"&{key}={value}"
@@ -43,7 +43,7 @@ class Camera:
 			name=device_name,
             model=device_type,
             serial_no=serial_number,
-            sw_version=sw_version
+            sw_version=sw_version,
 		)
 
 	@classmethod
@@ -54,6 +54,6 @@ class Camera:
 		for code, payload in self._camera.event_actions(
 			CAMERA_EVENTS_SPECIFIER,
 			retries=CAMERA_EVENTS_RETRIES,
-			timeout_cmd=CAMERA_EVENTS_TIMEOUT
+            timeout_cmd=CAMERA_EVENTS_TIMEOUT,
 		):
 			yield code, payload

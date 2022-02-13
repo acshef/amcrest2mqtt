@@ -13,7 +13,7 @@ from .mqtt_client import MQTTClient, MQTTMessage
 from .util import clamp, ping, str2bool
 
 
-_is_exiting = False # Global
+_is_exiting = False  # Global
 
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,7 @@ class Amcrest2MQTT:
 
     def run(self):
         from amcrest2mqtt import __version__
+
         logger.info(f"{APP_NAME} v{__version__}")
 
         # Exit if any of the required vars are not provided
@@ -46,6 +47,7 @@ class Amcrest2MQTT:
         self.camera = Camera.from_config(self.config)
 
         logger.info("Fetching camera details")
+
         try:
             self.device = self.camera.get_device()
         except AmcrestError:
@@ -144,14 +146,15 @@ class Amcrest2MQTT:
             if exit_on_error:
                 self.exit_gracefully(1, skip_mqtt=True)
 
-    def create_entity(self, name: str, component: str, *, friendly_name: str=None, **extra_config):
-        return Entity(
+    def create_entity(
             self,
-            name,
-            component,
-            friendly_name=friendly_name,
-            **extra_config
-        )
+        name: str,
+        component: str,
+        *,
+        friendly_name: str = None,
+        **extra_config,
+    ):
+        return Entity(self, name, component, friendly_name=friendly_name, **extra_config)
 
     def on_mqtt_disconnect(self, client, userdata, rc: int):
         if rc != 0:
@@ -160,7 +163,9 @@ class Amcrest2MQTT:
 
     def on_mqtt_message(self, client, userdata, message: MQTTMessage):
         handler_thread = Thread(
-            target=self.handle_mqtt_message, args=(message.topic, message.payload.decode()), daemon=True
+            target=self.handle_mqtt_message,
+            args=(message.topic, message.payload.decode()),
+            daemon=True,
         )
         handler_thread.start()
 
@@ -169,7 +174,11 @@ class Amcrest2MQTT:
 
         if self.mqtt_client is not None and self.mqtt_client.is_connected() and not skip_mqtt:
             if self.device:
-                self.mqtt_publish(self.device.status_topic, PAYLOAD_OFFLINE, exit_on_error=False)
+                self.mqtt_publish(
+                    self.device.status_topic,
+                    PAYLOAD_OFFLINE,
+                    exit_on_error=False,
+                )
             self.mqtt_client.loop_stop(force=True)
             self.mqtt_client.disconnect()
 
@@ -189,7 +198,9 @@ class Amcrest2MQTT:
             self.entity_doorbell.publish(doorbell_payload)
         elif code == "LeFunctionStatusSync" and payload["data"]["Function"] == "WightLight":
             light_payload = PAYLOAD_ON if payload["data"]["Status"] == "true" else PAYLOAD_OFF
-            light_mode = LIGHT_EFFECT_STROBE if "true" in payload["data"]["Flicker"] else LIGHT_EFFECT_NONE
+            light_mode = (
+                LIGHT_EFFECT_STROBE if "true" in payload["data"]["Flicker"] else LIGHT_EFFECT_NONE
+            )
             self.entity_flashlight.publish(light_payload)
             self.entity_flashlight.publish(light_mode, "effect")
 
@@ -215,10 +226,7 @@ class Amcrest2MQTT:
         elif self.is_ad410 and topic == self.entity_flashlight.command_topics["command"]:
             if payload == PAYLOAD_ON:
                 logger.info(f"Setting Flashlight to {payload}")
-                self.camera.set_config({
-                    CONFIG_LIGHT_MODE: "ForceOn",
-                    CONFIG_LIGHT_STATE: "On"
-                })
+                self.camera.set_config({CONFIG_LIGHT_MODE: "ForceOn", CONFIG_LIGHT_STATE: "On"})
                 self.entity_flashlight.publish(PAYLOAD_ON)
                 self.entity_flashlight.publish(LIGHT_EFFECT_NONE, "effect")
             elif payload == PAYLOAD_OFF:
@@ -236,10 +244,12 @@ class Amcrest2MQTT:
 
             if set_config_state:
                 logger.info(f"Setting Flashlight mode to {payload}")
-                self.camera.set_config({
+                self.camera.set_config(
+                    {
                     CONFIG_LIGHT_MODE: "ForceOn",
-                    CONFIG_LIGHT_STATE: set_config_state
-                })
+                        CONFIG_LIGHT_STATE: set_config_state,
+                    }
+                )
                 self.entity_flashlight.publish(payload, "effect")
             else:
                 logger.warning(f"Unknown Flashlight effect payload {payload}")
@@ -256,7 +266,9 @@ class Amcrest2MQTT:
 
     def _refresh_config_indicator_light(self):
         indicator_light_is_enabled = self.camera.get_config(CONFIG_INDICATOR_LIGHT, str2bool)
-        self.entity_indicator_light.publish(PAYLOAD_ON if indicator_light_is_enabled else PAYLOAD_OFF)
+        self.entity_indicator_light.publish(
+            PAYLOAD_ON if indicator_light_is_enabled else PAYLOAD_OFF
+        )
 
     def refresh_config_sensors(self):
         Timer(self.config.config_poll_interval, self.refresh_config_sensors).start()

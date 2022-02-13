@@ -79,7 +79,9 @@ class MQTTClient:
         self.client.on_disconnect = on_disconnect
 
     def publish(self, topic: str, payload: t.Any, json=False) -> MQTTMessage:
-        msg = self.client.publish(topic, self.transform_payload(payload, json), qos=self.config.mqtt_qos, retain=True)
+        msg = self.client.publish(
+            topic, self.transform_payload(payload, json), qos=self.qos, retain=True
+        )
 
         if msg.rc == MQTT_ERR_SUCCESS:
             msg.wait_for_publish()
