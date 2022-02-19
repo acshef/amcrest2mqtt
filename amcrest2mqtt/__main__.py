@@ -15,6 +15,7 @@ class CustomArgumentParser(argparse.ArgumentParser):
 
 def main():
     parser = CustomArgumentParser()
+    parser.add_argument("--device-name", metavar="S", type=str)
     parser.add_argument("--amcrest-host", metavar="S", required=True, type=str)
     parser.add_argument("--amcrest-port", metavar="N", default=DEFAULT_AMCREST_PORT, type=int)
     parser.add_argument(
@@ -50,7 +51,7 @@ def main():
     parser.add_argument("--mqtt-tls-cert", metavar="PATH", type=str)
     parser.add_argument("--mqtt-tls-key", metavar="PATH", type=str)
     parser.add_argument(
-        "--ha-prefix",
+        "--home-assistant-prefix",
         metavar="S",
         help='The prefix for the Home Assistant\'s MQTT discovery topic(s), see <https://www.home-assistant.io/docs/mqtt/discovery/#discovery_prefix>; "" to disable Home Assistant integration',
         default=DEFAULT_HOME_ASSISTANT_PREFIX,

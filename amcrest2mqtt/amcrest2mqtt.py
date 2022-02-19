@@ -25,6 +25,7 @@ class Amcrest2MQTT:
     amcrest_port: int = DEFAULT_AMCREST_PORT
     amcrest_username: str = DEFAULT_AMCREST_USERNAME
     amcrest_password: str = MISSING
+    device_name: str = None
     storage_poll_interval: int = DEFAULT_STORAGE_POLL_INTERVAL
     config_poll_interval: int = DEFAULT_CONFIG_POLL_INTERVAL
     mqtt_host: str = DEFAULT_MQTT_HOST
@@ -36,7 +37,7 @@ class Amcrest2MQTT:
     mqtt_tls_ca_cert: t.Optional[str] = None
     mqtt_tls_cert: t.Optional[str] = None
     mqtt_tls_key: t.Optional[str] = None
-    ha_prefix: t.Optional[str] = DEFAULT_HOME_ASSISTANT_PREFIX
+    home_assistant_prefix: t.Optional[str] = DEFAULT_HOME_ASSISTANT_PREFIX
 
     def __post_init__(self):
         if self.amcrest_host is MISSING:
@@ -56,10 +57,11 @@ class Amcrest2MQTT:
 
         try:
             self.camera = Camera(
-                self.amcrest_host,
-                self.amcrest_port,
-                self.amcrest_username,
-                self.amcrest_password,
+                host=self.amcrest_host,
+                port=self.amcrest_port,
+                username=self.amcrest_username,
+                password=self.amcrest_password,
+                device_name=self.device_name,
             )
         except Exception as exc:
             logger.error(f"Could not connect to Amcrest camera device: {exc}")
@@ -109,7 +111,7 @@ class Amcrest2MQTT:
         self.entity_indicator_light = self.create_entity(**Entity.DEF_INDICATOR_LIGHT)
 
         # Configure Home Assistant
-        if self.ha_prefix:
+        if self.home_assistant_prefix:
             logger.info("Writing Home Assistant discovery config...")
 
             if self.is_doorbell:
@@ -133,12 +135,10 @@ class Amcrest2MQTT:
         self.mqtt_publish(self.device.status_topic, PAYLOAD_ONLINE)
 
         if self.config_poll_interval > 0:
-            logger.info("Performing initial check of config sensors...")
-            self.refresh_config_sensors()
+            self.refresh_config_sensors(initial=True)
 
         if self.storage_poll_interval > 0:
-            logger.info("Performing initial check of storage sensors...")
-            self.refresh_storage_sensors()
+            self.refresh_storage_sensors(initial=True)
 
         logger.info("Performing initial camera ping...")
         self.ping_camera()
@@ -239,14 +239,12 @@ class Amcrest2MQTT:
 
     def handle_mqtt_message(self, topic: str, payload: str):
         if self.is_ad410 and topic == self.entity_indicator_light.command_topics["command"]:
-            new_value = "true" if payload == PAYLOAD_ON else "false"
-            logger.info(f"Setting Indicator Light to {new_value}")
-            self.camera.set_config({CONFIG_INDICATOR_LIGHT: new_value})
+            logger.info(f"Setting Indicator Light to {payload}")
+            self.camera.set_config({CONFIG_INDICATOR_LIGHT: payload == PAYLOAD_ON})
             self._refresh_config_indicator_light()
         elif self.is_ad410 and topic == self.entity_watermark.command_topics["command"]:
-            new_value = "true" if payload == PAYLOAD_ON else "false"
-            logger.info(f"Setting Watermark to {new_value}")
-            self.camera.set_config({CONFIG_WATERMARK: new_value})
+            logger.info(f"Setting Watermark to {payload}")
+            self.camera.set_config({CONFIG_WATERMARK: payload == PAYLOAD_ON})
             self._refresh_config_watermark()
         elif self.is_ad410 and topic == self.entity_siren_volume.command_topics["command"]:
             new_volume = clamp(int(payload), min=0, max=100)
@@ -300,18 +298,24 @@ class Amcrest2MQTT:
             PAYLOAD_ON if indicator_light_is_enabled else PAYLOAD_OFF
         )
 
-    def refresh_config_sensors(self):
+    def refresh_config_sensors(self, initial=False):
         Timer(self.config_poll_interval, self.refresh_config_sensors).start()
-        logger.info("Fetching config sensors...")
+        if initial:
+            logger.info("Performing initial fetch of config sensors...")
+        else:
+            logger.info("Fetching config sensors...")
 
         if self.is_ad410:
             self._refresh_config_siren_volume()
             self._refresh_config_watermark()
             self._refresh_config_indicator_light()
 
-    def refresh_storage_sensors(self):
+    def refresh_storage_sensors(self, initial=False):
         Timer(self.storage_poll_interval, self.refresh_storage_sensors).start()
-        logger.info("Fetching storage sensors...")
+        if initial:
+            logger.info("Performing initial fetch of storage sensors...")
+        else:
+            logger.info("Fetching storage sensors...")
 
         try:
             storage = self.camera.storage_all

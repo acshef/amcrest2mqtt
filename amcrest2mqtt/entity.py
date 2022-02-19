@@ -73,7 +73,7 @@ class Entity:
     @property
     def config_topic(self):
         node_id = f"{APP_NAME}-{self.device.serial_no}"
-        return f"{self.api.ha_prefix}/{self.component}/{node_id}/{self.device.slug}_{self.name_slug}/config"
+        return f"{self.api.home_assistant_prefix}/{self.component}/{node_id}/{self.device.slug}_{self.name_slug}/config"
 
     def absolute_topic(self, topic: str):
         if topic.startswith("~"):

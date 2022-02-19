@@ -32,6 +32,7 @@ class Device(NamedTuple):
 
     @property
     def status_topic(self) -> str:
+        """Used as the availability topic for Home Assistant entities"""
         return f"{self.topic}/status"
 
     @property
