@@ -8,6 +8,7 @@ COPY requirements.txt /
 RUN pip install --no-warn-script-location --prefix=/install -r /requirements.txt
 
 FROM base
+STOPSIGNAL SIGINT
 COPY --from=builder /install /usr/local
 COPY amcrest2mqtt /amcrest2mqtt
 WORKDIR /
