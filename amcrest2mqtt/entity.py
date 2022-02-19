@@ -56,6 +56,8 @@ class Entity:
         Will ALWAYS be prefixed with the device name
         """
         name = self.__friendly_name or self.name
+        if name == "Doorbell" and self.device.name == "Doorbell":
+            return name
         return f"{self.device.name} {name}"
 
     @property
