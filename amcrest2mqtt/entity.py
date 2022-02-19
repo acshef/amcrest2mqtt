@@ -152,24 +152,28 @@ class Entity:
         "friendly_name": "Storage Used %",
         "icon": ICON_MICRO_SD,
         "unit_of_measurement": UNITS_PERCENTAGE,
+        "entity_category": ENTITY_CATEGORY_DIAGNOSTIC,
     }
     DEF_STORAGE_USED = {
         "name": "Storage Used",
         "component": COMPONENT_SENSOR,
         "icon": ICON_MICRO_SD,
         "unit_of_measurement": UNITS_GIGABYTES,
+        "entity_category": ENTITY_CATEGORY_DIAGNOSTIC,
     }
     DEF_STORAGE_TOTAL = {
         "name": "Storage Total",
         "component": COMPONENT_SENSOR,
         "icon": ICON_MICRO_SD,
         "unit_of_measurement": UNITS_GIGABYTES,
+        "entity_category": ENTITY_CATEGORY_DIAGNOSTIC,
     }
     DEF_SIREN_VOLUME = {
         "name": "Siren Volume",
         "component": COMPONENT_NUMBER,
         "icon": ICON_VOLUME_HIGH,
         "command_topics": {"command": "~/set"},
+        "entity_category": ENTITY_CATEGORY_CONFIG,
         "min": 0,
         "max": 100,
         "step": 1,
@@ -179,6 +183,7 @@ class Entity:
         "component": COMPONENT_SWITCH,
         "icon": ICON_WATERMARK,
         "command_topics": {"command": "~/set"},
+        "entity_category": ENTITY_CATEGORY_CONFIG,
     }
     DEF_INDICATOR_LIGHT = {
         "name": "Indicator Light",
@@ -187,4 +192,5 @@ class Entity:
         "command_topics": {
             "command": "~/set",
         },
+        "entity_category": ENTITY_CATEGORY_CONFIG,
     }

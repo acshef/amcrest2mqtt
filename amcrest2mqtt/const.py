@@ -5,6 +5,18 @@ CAMERA_EVENTS_SPECIFIER = "All"
 CAMERA_EVENTS_RETRIES = 5
 CAMERA_EVENTS_TIMEOUT = (10.00, 3600)  # (connect timeout, read timeout)
 
+COMPONENT_BINARY_SENSOR = "binary_sensor"
+COMPONENT_LIGHT = "light"
+COMPONENT_NUMBER = "number"
+COMPONENT_SENSOR = "sensor"
+COMPONENT_SWITCH = "switch"
+
+CONFIG_SIREN_VOLUME = "VideoTalkPhoneGeneral.RingVolume"
+CONFIG_LIGHT_MODE = "Lighting_V2[0][0][1].Mode"
+CONFIG_LIGHT_STATE = "Lighting_V2[0][0][1].State"
+CONFIG_WATERMARK = "VideoWidget[0].PictureTitle.EncodeBlend"
+CONFIG_INDICATOR_LIGHT = "LightGlobal[0].Enable"
+
 DEFAULT_AMCREST_PORT = 80
 DEFAULT_AMCREST_USERNAME = "admin"
 DEFAULT_STORAGE_POLL_INTERVAL = 3600
@@ -19,11 +31,8 @@ DEVICE_CLASS_MOTION = "motion"
 DEVICE_TYPE_AD110 = "AD110"
 DEVICE_TYPE_AD410 = "AD410"
 
-COMPONENT_BINARY_SENSOR = "binary_sensor"
-COMPONENT_LIGHT = "light"
-COMPONENT_NUMBER = "number"
-COMPONENT_SENSOR = "sensor"
-COMPONENT_SWITCH = "switch"
+ENTITY_CATEGORY_CONFIG = "config"
+ENTITY_CATEGORY_DIAGNOSTIC = "diagnostic"
 
 ICON_FACE_RECOGNITION = "mdi:face-recognition"
 ICON_FLASHLIGHT = "mdi:flashlight"
@@ -36,6 +45,8 @@ ICON_CIRCLE_OUTLINE = "mdi:circle-outline"
 LIGHT_EFFECT_NONE = "None"
 LIGHT_EFFECT_STROBE = "Strobe (30sec)"
 
+MISSING = object()  # Sentinel
+
 PAYLOAD_ON = "on"
 PAYLOAD_OFF = "off"
 PAYLOAD_ONLINE = "online"
@@ -46,11 +57,3 @@ TIME_CAMERA_PING_TIMEOUT = 100  # Seconds
 
 UNITS_PERCENTAGE = "%"
 UNITS_GIGABYTES = "GB"
-
-CONFIG_SIREN_VOLUME = "VideoTalkPhoneGeneral.RingVolume"
-CONFIG_LIGHT_MODE = "Lighting_V2[0][0][1].Mode"
-CONFIG_LIGHT_STATE = "Lighting_V2[0][0][1].State"
-CONFIG_WATERMARK = "VideoWidget[0].PictureTitle.EncodeBlend"
-CONFIG_INDICATOR_LIGHT = "LightGlobal[0].Enable"
-
-MISSING = object()  # Sentinel
