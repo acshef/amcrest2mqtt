@@ -134,6 +134,13 @@ class Amcrest2MQTT:
         # Begin main behavior
         self.mqtt_publish(self.device.status_topic, PAYLOAD_ONLINE)
 
+        # Not used by Home Assistant -- for purely MQTT-based uses
+        self.mqtt_publish(
+            self.device.config_topic,
+            {"version": __version__, **self.device.as_mqtt_device_dict()},
+            json=True,
+        )
+
         if self.config_poll_interval > 0:
             self.refresh_config_sensors(initial=True)
 
