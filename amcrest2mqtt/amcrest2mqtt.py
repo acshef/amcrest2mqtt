@@ -115,21 +115,21 @@ class Amcrest2MQTT:
             logger.info("Writing Home Assistant discovery config...")
 
             if self.is_doorbell:
-                self.entity_doorbell.setup_ha()
+                self.entity_doorbell.setup_ha(self)
 
             if self.is_ad410:
-                self.entity_human.setup_ha()
-                self.entity_flashlight.setup_ha()
-                self.entity_siren_volume.setup_ha()
-                self.entity_watermark.setup_ha()
-                self.entity_indicator_light.setup_ha()
+                self.entity_human.setup_ha(self)
+                self.entity_flashlight.setup_ha(self)
+                self.entity_siren_volume.setup_ha(self)
+                self.entity_watermark.setup_ha(self)
+                self.entity_indicator_light.setup_ha(self)
 
-            self.entity_motion.setup_ha()
+            self.entity_motion.setup_ha(self)
 
             if self.storage_poll_interval > 0:
-                self.entity_storage_used_percent.setup_ha()
-                self.entity_storage_used.setup_ha()
-                self.entity_storage_total.setup_ha()
+                self.entity_storage_used_percent.setup_ha(self)
+                self.entity_storage_used.setup_ha(self)
+                self.entity_storage_total.setup_ha(self)
 
         # Begin main behavior
         self.mqtt_publish(self.device.status_topic, PAYLOAD_ONLINE)
@@ -191,7 +191,7 @@ class Amcrest2MQTT:
         friendly_name: str = None,
         **extra_config,
     ):
-        return Entity(self, name, component, friendly_name=friendly_name, **extra_config)
+        return Entity(self.device, name, component, friendly_name=friendly_name, **extra_config)
 
     def on_mqtt_disconnect(self, client, userdata, rc: int):
         if rc != 0:

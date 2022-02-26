@@ -1,6 +1,8 @@
 from __future__ import annotations
+from collections import deque
 import typing as t
 import logging
+import warnings
 
 from .const import *
 from .device import Device
@@ -17,7 +19,7 @@ logger = logging.getLogger(__name__)
 class Entity:
     def __init__(
         self,
-        api: "Amcrest2MQTT",
+        device: Device,
         name: str,
         component: str,
         *,
@@ -27,10 +29,11 @@ class Entity:
     ):
         self.name = name
         self.component = component
-        self.api = api
+        self.device = device
         self.__friendly_name = friendly_name
         self.command_topics: t.Dict[str, str] = {}
         self.extra_config = extra_config
+        self.publish_callbacks: t.Deque["PublishCallback"] = deque()
 
         if command_topics:
             for command, topic in command_topics.items():
@@ -43,10 +46,6 @@ class Entity:
 
         if self.extra_config.get("device_class", False) is None:
             self.extra_config.pop("device_class")
-
-    @property
-    def device(self) -> Device:
-        return self.api.device
 
     @property
     def friendly_name(self):
@@ -72,10 +71,9 @@ class Entity:
     def base_topic(self):
         return f"{self.device.topic}/{self.name_slug}"
 
-    @property
-    def config_topic(self):
+    def get_ha_config_topic(self, prefix: str):
         node_id = f"{APP_NAME}-{self.device.serial_no}"
-        return f"{self.api.home_assistant_prefix}/{self.component}/{node_id}/{self.device.slug}_{self.name_slug}/config"
+        return f"{prefix}/{self.component}/{node_id}/{self.device.slug}_{self.name_slug}/config"
 
     def absolute_topic(self, topic: str):
         if topic.startswith("~"):
@@ -85,12 +83,25 @@ class Entity:
             topic = f"{start}{self.base_topic}"
         return topic
 
-    def setup_ha(self):
+    def setup_ha(self, api: "Amcrest2MQTT"):
         """
-        Publish discovery to Home Assistant, then subscribe to command topics
+        Register publish callback, publish discovery to Home Assistant, then subscribe to command topics
         """
-        self.api.mqtt_publish(
-            self.config_topic,
+
+        def publish_via_mqtt(payload: t.Any, topic: str = None, *, json: bool = False):
+            """
+            Publish data to a topic relative to the `base_topic`, e.g.
+
+            ```
+            topic="effect" -> f"{self.base_topic}/effect"
+            ```
+            """
+            api.mqtt_publish(self.base_topic + (f"/{topic}" if topic else ""), payload, json=json)
+
+        self.publish_callbacks.append(publish_via_mqtt)
+
+        api.mqtt_publish(
+            self.get_ha_config_topic(api.home_assistant_prefix),
             {
                 "~": self.base_topic,
                 "availability_topic": self.device.status_topic,
@@ -98,26 +109,28 @@ class Entity:
                 "name": self.friendly_name,
                 "state_topic": "~",
                 "unique_id": self.unique_id,
-                "qos": self.api.mqtt_qos,
+                "qos": api.mqtt_qos,
                 **self.extra_config,
             },
             json=True,
         )
+
         for topic in self.command_topics.values():
             logger.info(f'Subscribing to command topic "{topic}" for entity "{self.name}"')
-            self.api.mqtt_client.subscribe(topic)
+            api.mqtt_client.subscribe(topic)
 
     def publish(self, payload: t.Any, topic: str = None, *, json: bool = False):
-        """
-        Publish data to a topic relative to the `base_topic`, e.g.
+        if not len(self.publish_callbacks):
+            warnings.warn(
+                f"No publish callbacks registered for entity {self.friendly_name!r}",
+                UselessPublishWarning,
+                stacklevel=2,
+            )
+            return
 
-        ```
-        topic="effect" -> f"{self.base_topic}/effect"
-        ```
-        """
-        return self.api.mqtt_publish(
-            self.base_topic + (f"/{topic}" if topic else ""), payload, json=json
-        )
+        for cb in self.publish_callbacks:
+            if cb(payload, topic, json=json) is False:
+                break
 
     DEF_DOORBELL = {
         "name": "Doorbell",
@@ -194,3 +207,15 @@ class Entity:
         },
         "entity_category": ENTITY_CATEGORY_CONFIG,
     }
+
+
+class PublishCallback(t.Protocol):
+    def __call__(self, payload: t.Any, topic: str = None, *, json: bool = False) -> t.Any:
+        """
+        Return `False` to prevent the rest of the callbacks to execute
+        """
+        ...
+
+
+class UselessPublishWarning(Warning):
+    pass
