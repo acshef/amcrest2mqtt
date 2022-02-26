@@ -64,6 +64,8 @@ def main():
         format="%(asctime)s [%(levelname)s] %(message)s",
     )
 
+    logging.captureWarnings(True)
+
     args = vars(parser.parse_args())
     app = Amcrest2MQTT(**args)
     app.run()
