@@ -1,5 +1,6 @@
 from __future__ import annotations
 from collections import deque
+from functools import partial
 import typing as t
 import logging
 import warnings
@@ -30,10 +31,10 @@ class Entity:
         self.name = name
         self.component = component
         self.device = device
-        self.__friendly_name = friendly_name
+        self._friendly_name = friendly_name
         self.command_topics: t.Dict[str, str] = {}
         self.extra_config = extra_config
-        self.publish_callbacks: t.Deque["PublishCallback"] = deque()
+        self._publish_callbacks: t.Deque["PublishCallback"] = deque()
 
         if command_topics:
             for command, topic in command_topics.items():
@@ -50,11 +51,11 @@ class Entity:
     @property
     def friendly_name(self):
         """
-        The `friendly_name` arg if passed to ctor, otherwise `name`
+        The `friendly_name` arg if passed to __init__, otherwise `name`
 
         Will ALWAYS be prefixed with the device name
         """
-        name = self.__friendly_name or self.name
+        name = self._friendly_name or self.name
         if name == "Doorbell" and self.device.name == "Doorbell":
             return name
         return f"{self.device.name} {name}"
@@ -71,9 +72,24 @@ class Entity:
     def base_topic(self):
         return f"{self.device.topic}/{self.name_slug}"
 
-    def get_ha_config_topic(self, prefix: str):
+    def get_ha_config_topic(self, prefix=DEFAULT_HOME_ASSISTANT_PREFIX):
+        """
+        https://www.home-assistant.io/docs/mqtt/discovery/#discovery-topic
+
+        `<discovery_prefix>/<component>/[<node_id>/]<object_id>/config`
+
+        |   |   |
+        |---|---|
+        | `<discovery_prefix>`   | The prefix for the discovery topic, `"homeassistant"` by default |
+        | `<component>`          | One of the supported MQTT components, e.g. `binary_sensor`       |
+        | `<node_id>` (Optional) | ID of the node providing the topic, this is not used by Home Assistant but may be used to structure the MQTT topic. The ID of the node must only consist of characters from the character class `[a-zA-Z0-9_-]` (alphanumerics, underscore and hyphen). |
+        | `<object_id>`          | The ID of the device. This is only to allow for separate topics for each device and is not used for the entity_id. The ID of the device must only consist of characters from the character class `[a-zA-Z0-9_-]` (alphanumerics, underscore and hyphen). |
+        """
+
         node_id = f"{APP_NAME}-{self.device.serial_no}"
-        return f"{prefix}/{self.component}/{node_id}/{self.device.slug}_{self.name_slug}/config"
+        object_id = f"{self.device.slug}_{self.name_slug}"
+
+        return f"{prefix}/{self.component}/{node_id}/{object_id}/config"
 
     def absolute_topic(self, topic: str):
         if topic.startswith("~"):
@@ -83,22 +99,19 @@ class Entity:
             topic = f"{start}{self.base_topic}"
         return topic
 
+    def register_publish_callback(self, cb: PublishCallback, left=False):
+        if left:
+            self._publish_callbacks.appendleft(cb)
+        else:
+            self._publish_callbacks.append(cb)
+
     def setup_ha(self, api: "Amcrest2MQTT"):
         """
         Register publish callback, publish discovery to Home Assistant, then subscribe to command topics
         """
 
-        def publish_via_mqtt(payload: t.Any, topic: str = None, *, json: bool = False):
-            """
-            Publish data to a topic relative to the `base_topic`, e.g.
-
-            ```
-            topic="effect" -> f"{self.base_topic}/effect"
-            ```
-            """
-            api.mqtt_publish(self.base_topic + (f"/{topic}" if topic else ""), payload, json=json)
-
-        self.publish_callbacks.append(publish_via_mqtt)
+        callback = partial(self._publish_mqtt, api)
+        self.register_publish_callback(callback)
 
         api.mqtt_publish(
             self.get_ha_config_topic(api.home_assistant_prefix),
@@ -119,8 +132,28 @@ class Entity:
             logger.info(f'Subscribing to command topic "{topic}" for entity "{self.name}"')
             api.mqtt_client.subscribe(topic)
 
-    def publish(self, payload: t.Any, topic: str = None, *, json: bool = False):
-        if not len(self.publish_callbacks):
+    def _publish_mqtt(self, api: "Amcrest2MQTT", payload: t.Any, topic: str = None):
+        """
+        Publish data to a topic relative to the `base_topic`, e.g.
+
+        ```
+        topic="effect" -> f"{self.base_topic}/effect"
+        ```
+        """
+        full_topic = self.base_topic
+        if topic:
+            full_topic += f"/{topic}"
+        api.mqtt_publish(full_topic, payload)
+
+    def publish(self, payload: t.Any, topic: str = None):
+        """
+        Publish data to a topic relative to the `base_topic`, e.g.
+
+        ```
+        topic="effect" -> f"{self.base_topic}/effect"
+        ```
+        """
+        if not len(self._publish_callbacks):
             warnings.warn(
                 f"No publish callbacks registered for entity {self.friendly_name!r}",
                 UselessPublishWarning,
@@ -128,8 +161,8 @@ class Entity:
             )
             return
 
-        for cb in self.publish_callbacks:
-            if cb(payload, topic, json=json) is False:
+        for cb in self._publish_callbacks:
+            if cb(payload, topic) is False:
                 break
 
     DEF_DOORBELL = {
@@ -210,7 +243,7 @@ class Entity:
 
 
 class PublishCallback(t.Protocol):
-    def __call__(self, payload: t.Any, topic: str = None, *, json: bool = False) -> t.Any:
+    def __call__(self, payload: t.Any, topic: t.Optional[str] = None) -> t.Any:
         """
         Return `False` to prevent the rest of the callbacks to execute
         """
