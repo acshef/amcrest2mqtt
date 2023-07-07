@@ -155,7 +155,7 @@ class Entity:
         """
         if not len(self._publish_callbacks):
             warnings.warn(
-                f"No publish callbacks registered for entity {self.friendly_name!r}",
+                f'No publish callbacks registered for entity "{self.name}"',
                 UselessPublishWarning,
                 stacklevel=2,
             )
@@ -245,7 +245,7 @@ class Entity:
 class PublishCallback(t.Protocol):
     def __call__(self, payload: t.Any, topic: t.Optional[str] = None) -> t.Any:
         """
-        Return `False` to prevent the rest of the callbacks to execute
+        Return `False` to prevent the remainder of the callbacks from executing
         """
         ...
 

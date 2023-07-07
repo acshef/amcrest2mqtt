@@ -39,6 +39,14 @@ class Camera:
         _, _, value = line.partition("=")
         return type(value.strip())
 
+    def get_config_all(self):
+        ret = self._camera.command(f"configManager.cgi?action=getConfig&name=All")
+        obj = dict()
+        for line in ret.content.decode().strip().splitlines():
+            key, _, value = line.partition("=")
+            obj[key] = value
+        return obj
+
     def set_config(self, values: t.Dict[str, t.Any]):
         url = "configManager.cgi?action=setConfig"
         for key, value in values.items():

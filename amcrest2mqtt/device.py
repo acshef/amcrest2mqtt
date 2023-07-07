@@ -37,6 +37,7 @@ class Device(NamedTuple):
 
     @property
     def event_topic(self) -> str:
+        """Not used by Home Assistant -- for purely MQTT-based uses"""
         return f"{self.topic}/event"
 
     @property

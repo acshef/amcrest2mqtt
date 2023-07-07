@@ -41,11 +41,11 @@ class Amcrest2MQTT:
 
     def __post_init__(self):
         if self.amcrest_host is MISSING:
-            raise TypeError("Amcrest2MQTT() requires str argument 'amcrest_host'")
+            raise TypeError(f"{type(self).__qualname__}() requires str argument 'amcrest_host'")
         if self.amcrest_password is MISSING:
-            raise TypeError("Amcrest2MQTT() requires str argument 'amcrest_password'")
+            raise TypeError(f"{type(self).__qualname__}() requires str argument 'amcrest_password'")
         if self.mqtt_username is MISSING:
-            raise TypeError("Amcrest2MQTT() requires str argument 'mqtt_username'")
+            raise TypeError(f"{type(self).__qualname__}() requires str argument 'mqtt_username'")
 
     def run(self):
         from amcrest2mqtt import __version__
