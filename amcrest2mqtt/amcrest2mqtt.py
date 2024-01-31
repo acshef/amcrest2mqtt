@@ -38,6 +38,7 @@ class Amcrest2MQTT:
     mqtt_tls_cert: t.Optional[str] = None
     mqtt_tls_key: t.Optional[str] = None
     home_assistant_prefix: t.Optional[str] = DEFAULT_HOME_ASSISTANT_PREFIX
+    doorbell_off_timeout: float = DEFAULT_DOORBELL_OFF_TIMEOUT
 
     def __post_init__(self):
         if self.amcrest_host is MISSING:
@@ -109,6 +110,8 @@ class Amcrest2MQTT:
         self.entity_siren_volume = self.create_entity(**Entity.DEF_SIREN_VOLUME)
         self.entity_watermark = self.create_entity(**Entity.DEF_WATERMARK)
         self.entity_indicator_light = self.create_entity(**Entity.DEF_INDICATOR_LIGHT)
+
+        self.doorbell_off_timer: t.Optional[Timer] = None
 
         # Configure Home Assistant
         if self.home_assistant_prefix:
@@ -233,6 +236,12 @@ class Amcrest2MQTT:
         elif code == "_DoTalkAction_":
             doorbell_payload = PAYLOAD_ON if payload["data"]["Action"] == "Invite" else PAYLOAD_OFF
             self.entity_doorbell.publish(doorbell_payload)
+            if doorbell_payload == PAYLOAD_ON:
+                if self.doorbell_off_timeout:
+                    self.doorbell_off_timer = Timer(self.doorbell_off_timeout, self._send_doorbell_off).start()
+            else:
+                if self.doorbell_off_timer is not None:
+                    self.doorbell_off_timer.cancel()
         elif code == "LeFunctionStatusSync" and payload["data"]["Function"] == "WightLight":
             light_payload = PAYLOAD_ON if payload["data"]["Status"] == "true" else PAYLOAD_OFF
             light_mode = (
@@ -304,6 +313,11 @@ class Amcrest2MQTT:
         self.entity_indicator_light.publish(
             PAYLOAD_ON if indicator_light_is_enabled else PAYLOAD_OFF
         )
+
+    def _send_doorbell_off(self):
+        logger.info(f"Didn't receive doorbell off message within {self.doorbell_off_timeout:.1f} sec")
+        self.entity_doorbell.publish(PAYLOAD_OFF)
+        self.doorbell_off_timer = None
 
     def refresh_config_sensors(self, initial=False):
         Timer(self.config_poll_interval, self.refresh_config_sensors).start()

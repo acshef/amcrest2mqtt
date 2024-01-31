@@ -51,6 +51,13 @@ def main():
     parser.add_argument("--mqtt-tls-cert", metavar="PATH", type=str)
     parser.add_argument("--mqtt-tls-key", metavar="PATH", type=str)
     parser.add_argument(
+        "--doorbell-off-timeout",
+        metavar="N",
+        help="The time (in seconds) to use to automatically publish a 'doorbell off' MQTT message if no such event comes from the doorbell, has no effect if the Amcrest device is not a doorbell; 0 to disable",
+        type=float,
+        default=DEFAULT_DOORBELL_OFF_TIMEOUT,
+    )
+    parser.add_argument(
         "--home-assistant-prefix",
         metavar="S",
         help='The prefix for the Home Assistant\'s MQTT discovery topic(s), see <https://www.home-assistant.io/docs/mqtt/discovery/#discovery_prefix>; "" to disable Home Assistant integration',
