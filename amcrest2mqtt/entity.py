@@ -86,8 +86,8 @@ class Entity:
         | `<object_id>`          | The ID of the device. This is only to allow for separate topics for each device and is not used for the entity_id. The ID of the device must only consist of characters from the character class `[a-zA-Z0-9_-]` (alphanumerics, underscore and hyphen). |
         """
 
-        node_id = f"{APP_NAME}-{self.device.serial_no}"
-        object_id = f"{self.device.slug}_{self.name_slug}"
+        node_id = f"{APP_NAME}-{self.device.slug}-{self.device.serial_no}"
+        object_id = self.name_slug
 
         return f"{prefix}/{self.component}/{node_id}/{object_id}/config"
 
